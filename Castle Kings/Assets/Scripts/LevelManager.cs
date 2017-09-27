@@ -52,6 +52,15 @@ public class LevelManager : Singleton<LevelManager> {
         }
     }
 
+    public Point PlayerCastleSpawn
+    {
+        get
+        {
+            return playerCastleSpawn;
+        }
+    }
+
+
     // Use this for initialization
     void Start ()
     {
@@ -122,7 +131,8 @@ public class LevelManager : Singleton<LevelManager> {
         //Create the entrance
         Instantiate(castleEntrancePrefab, Tiles[playerCastleSpawn].GetComponent<TileHandler>().WorldPos, Quaternion.identity);
         Tiles[playerCastleSpawn].GetComponent<TileHandler>().IsEmpty = false;
-        Tiles[playerCastleSpawn].GetComponent<TileHandler>().Walkable = false;
+        Tiles[playerCastleSpawn].GetComponent<TileHandler>().Walkable = true;
+
 
         //Create the rest of the castle
         for (int x = playerCastleSpawn.X - ((castleWidth-1)/2); x <= playerCastleSpawn.X + ((castleWidth - 1) / 2); x++)
@@ -141,6 +151,24 @@ public class LevelManager : Singleton<LevelManager> {
         }
 
         //TODO: CREATE ENEMY CASTLE
+        Instantiate(castleEntrancePrefab, Tiles[enemyCastleSpawn].GetComponent<TileHandler>().WorldPos, Quaternion.identity);
+        Tiles[enemyCastleSpawn].GetComponent<TileHandler>().IsEmpty = false;
+        Tiles[enemyCastleSpawn].GetComponent<TileHandler>().Walkable = true;
+
+        for (int x = enemyCastleSpawn.X - ((castleWidth - 1) / 2); x <= enemyCastleSpawn.X + ((castleWidth - 1) / 2); x++)
+        {
+            for (int y = enemyCastleSpawn.Y; y > enemyCastleSpawn.Y - castleHeight; y--)
+            {
+                if (x != enemyCastleSpawn.X || y != enemyCastleSpawn.Y)
+                {
+                    Instantiate(castleWallPrefab, Tiles[new Point(x, y)].GetComponent<TileHandler>().WorldPos, Quaternion.identity);
+                    Tiles[new Point(x, y)].GetComponent<TileHandler>().IsEmpty = false;
+                    Tiles[new Point(x, y)].GetComponent<TileHandler>().Walkable = false;
+
+
+                }
+            }
+        }
 
     }
 

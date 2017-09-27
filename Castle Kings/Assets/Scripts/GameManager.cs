@@ -47,6 +47,8 @@ public class GameManager : Singleton<GameManager> {
     private int income;
     private float incomeMultiplier;
 
+    private Building selectedBuilding;
+
     public ObjectPool Pool { get; set; }
 
     private void Awake()
@@ -83,10 +85,27 @@ public class GameManager : Singleton<GameManager> {
         {
             Gold -= ClickedButton.Price;
             IncreaseIncome(ClickedButton.Price);
+
+            //TEMP FIX ASAP
+            if (ClickedButton.name == "SoldierButton")
+            {
+                StartBuilding(buildingPos, "LeftTeam");
+            }
+            else
+            {
+                StartBuilding(buildingPos, "RightTeam");
+
+            }
+
             BuildingHover.Instance.DeavtivateHover();
-            StartBuilding(buildingPos);
 
         }
+    }
+
+    //TODO: make building selectable to enable upgrades and info etc
+    public void SelectBuilding(Building building)
+    {
+
     }
 
     private void HandleCancel()
@@ -101,7 +120,7 @@ public class GameManager : Singleton<GameManager> {
     private void GiveIncome()
     {
         Gold += Income;
-        Debug.Log("Current income: " + income);
+        //Debug.Log("Current income: " + income);
     }
 
     private void IncreaseIncome(int goldSpent)
@@ -110,22 +129,35 @@ public class GameManager : Singleton<GameManager> {
         income += incomeIncrese;
     }
 
-    private void StartBuilding(Point buildingPos)
+    private void StartBuilding(Point buildingPos, string team)
     {
-        StartCoroutine(SpawnUnit(3.0f, buildingPos));
+        StartCoroutine(SpawnUnit(10.0f, buildingPos, team));
     }
 
-    private IEnumerator SpawnUnit(float spawnTime, Point unitPos)
+    private IEnumerator SpawnUnit(float spawnTime, Point unitPos, string team)
     {
-        Debug.Log("SPAWNING A MONSTER");
-        //FIX THIS SHIT
-        int unitIndex = 0;
-        string type = "Soldier";
+        while(true)
+        {
+            //Debug.Log("SPAWNING A MONSTER");
+            //FIX THIS SHIT
+            //int unitIndex = 0;
+            string type = "Soldier";
 
-        Unit unit = Pool.GetObject(type).GetComponent<Unit>();
-        Stack<Node> unitPath = LevelManager.Instance.GeneratePath(unitPos, LevelManager.Instance.EnemyCastleSpawn);
-        unit.Spawn(unitPos, unitPath);
-        yield return new WaitForSeconds(spawnTime);
+            Unit unit = Pool.GetObject(type).GetComponent<Unit>();
+            Point goal;
+            if (team == "LeftTeam")
+            {
+                goal = LevelManager.Instance.EnemyCastleSpawn;
+            }
+            else
+            {
+                goal = LevelManager.Instance.PlayerCastleSpawn;
+            }
+            Stack<Node> unitPath = LevelManager.Instance.GeneratePath(unitPos, goal);
+            unit.Spawn(unitPos, unitPath, team);
+            yield return new WaitForSeconds(spawnTime);
+        }
+
     }
 }
 

@@ -17,6 +17,7 @@ public class BuildingButton : MonoBehaviour {
     [SerializeField]
     private Text priceText;
 
+
     public GameObject BuildingPrefab
     {
         get

@@ -19,6 +19,9 @@ public class UnitAggro : MonoBehaviour {
     {
         u.AggroRangeTrigger(collision);
     }
-    
 
+    private void OnTriggerExit2D(Collider2D collision)
+    {
+        u.AggroRangeTriggerExit(collision);
+    }
 }

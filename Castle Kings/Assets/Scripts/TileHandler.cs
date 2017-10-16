@@ -63,7 +63,7 @@ public class TileHandler : MonoBehaviour
 
             if (Input.GetMouseButtonDown(0) && IsEmpty)
             {
-                PlaceBuilding();
+                PlaceBuilding(Teams.LeftTeam);
             }
         }
         
@@ -74,10 +74,11 @@ public class TileHandler : MonoBehaviour
         RemoveHoverSprite();
     }
 
-    private void PlaceBuilding()
+    public void PlaceBuilding(Teams team)
     {
-        
-        GameObject newBuilding = Instantiate(GameManager.Instance.ClickedButton.BuildingPrefab, transform.position, Quaternion.identity);
+
+        //Change the first arg to "GameManager.Instance.ClickedButton.BuildingPrefab" if different buildings get added
+        GameObject newBuilding = Instantiate(GameManager.Instance.buildingPrefab, transform.position, Quaternion.identity);
 
         //Make sure towers don't render under each other
         newBuilding.GetComponent<SpriteRenderer>().sortingOrder = GridPos.Y;
@@ -87,7 +88,7 @@ public class TileHandler : MonoBehaviour
         IsEmpty = false;
         Walkable = false;
         RemoveHoverSprite();
-        GameManager.Instance.BuyBuilding(GridPos);               
+        GameManager.Instance.BuyBuilding(GridPos, team);               
     }
 
     //TODO: enable/disable hoversprite instead of instantiating/destroying (sprite.Enable)

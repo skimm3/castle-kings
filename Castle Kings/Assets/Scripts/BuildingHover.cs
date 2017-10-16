@@ -31,7 +31,6 @@ public class BuildingHover : Singleton<BuildingHover> {
         this.spriteRenderer.sprite = sprite;
         spriteRenderer.enabled = true;
 
-        
     }
 
     public void DeavtivateHover()

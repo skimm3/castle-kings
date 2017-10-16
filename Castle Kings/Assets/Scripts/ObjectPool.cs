@@ -10,6 +10,8 @@ public class ObjectPool : MonoBehaviour
 
     private List<GameObject> pooledObjects = new List<GameObject>();
 
+    private int idCount = 0;
+
 	public GameObject GetObject(string type)
     {
         foreach (GameObject obj in pooledObjects)
@@ -31,6 +33,8 @@ public class ObjectPool : MonoBehaviour
                 GameObject newObj = Instantiate(objectPrefabs[i]);
                 pooledObjects.Add(newObj);
                 newObj.name = type;
+                newObj.GetComponent<Unit>().Id = idCount;
+                idCount++;
                 return newObj;
             }
         }

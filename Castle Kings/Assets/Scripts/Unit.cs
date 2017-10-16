@@ -1,4 +1,5 @@
-﻿using System.Collections;
+﻿using System;
+using System.Collections;
 using System.Collections.Generic;
 using UnityEngine;
 using UnityEngine.UI;
@@ -11,19 +12,36 @@ public class Unit : MonoBehaviour {
     public Image healthBar;
 
     private Stack<Node> path;
+    private List<Unit> aggroList; //Keep track on enemies in aggro range
+    private List<Unit> attacklist; //Keep track on enemies in attack range
 
     public Point GridPos { get; set; }
 
-    private Teams Team
+    //private Teams Team
+    //{
+    //    get
+    //    {
+    //        return team;
+    //    }
+
+    //    set
+    //    {
+    //        team = value;
+    //    }
+    //}
+
+    public int Id { get; set; }
+
+    public float Health
     {
         get
         {
-            return team;
+            return health;
         }
 
-        set
+        private set
         {
-            team = value;
+            health = value;
         }
     }
 
@@ -33,11 +51,10 @@ public class Unit : MonoBehaviour {
     //The next tile to move to
     private Vector3 destination;
 
-    enum States { MovingToCastle, MovingToUnit, AttackingUnit, AttackingCastle };
-    enum Teams { LeftTeam, RightTeam };
-    private States currentState;
+    //enum Teams { LeftTeam, RightTeam };
     private Teams team;
-
+    private Color leftColor = Color.green;
+    private Color rightColor = Color.red;
     private float health;
     private float maxHealth = 100;
     private float attackDamage;
@@ -45,50 +62,69 @@ public class Unit : MonoBehaviour {
     private float attackSpeed;
     private float attackTimer;
     private bool canAttack;
-    
 
+    private bool targetInRange = false;
+    private bool moving;
 
+    UnitInfo unitInfo;
+
+    private void Awake()
+    {
+        aggroList = new List<Unit>();
+        attacklist = new List<Unit>();
+        path = new Stack<Node>();
+        unitInfo = GetComponent<UnitInfo>();
+
+    }
 
     // Use this for initialization
     void Start ()
     {
-        currentState = States.MovingToCastle;
-        maxHealth = 100;
-        health = maxHealth;
-        attackDamage = 20;
-        attackSpeed = 1.0f;
-        canAttack = true;
-
+        maxHealth = unitInfo.getMaxHealth(this.name);
+        attackDamage = unitInfo.getAttackDamage(this.name);
+        attackSpeed = unitInfo.getAttackSpeed(this.name);
+        Health = maxHealth;
+        canAttack = true;       
 	}
 	
 	// Update is called once per frame
 	void Update ()
     {
         Move();
+        UpdateTarget();
         Attack();
+        //Debug.Log("Id: " + this.Id + " is targeting: " + target);
 	}
 
-    public void Spawn(Point spawnPos, Stack<Node> path, string team)
+
+    public void Spawn(Point spawnPos, Stack<Node> path, Teams team)
     {
-        //Debug.Log("SPAWNING UNIT");
+        //Debug.Log("SPAWNING UNIT: " + this.name + " with ID: " + Id + " at: " + spawnPos.X + ", " + spawnPos.Y);
         transform.position = LevelManager.Instance.Tiles[spawnPos].transform.position;
-        this.GetComponent<SpriteRenderer>().sortingOrder = 50; //TODO: FIX SORTING SYSTEM
-        SetPath(path);
-        health = maxHealth;
-        UpdateHealthBar();
-        if (team == "LeftTeam")
+        GridPos = spawnPos;
+        if (team == Teams.LeftTeam)
         {
-            this.Team = Teams.LeftTeam;
+            this.team = Teams.LeftTeam;
+            aggroList.Add(GameManager.Instance.RightCastle);
         }
         else
         {
-            this.Team = Teams.RightTeam;
+            this.team = Teams.RightTeam;
+            aggroList.Add(GameManager.Instance.LeftCastle);
+
         }
+        this.GetComponent<SpriteRenderer>().sortingOrder = 50; //TODO: FIX SORTING SYSTEM
+        SetPath(path);
+        setHealthBarColor();
+        Health = maxHealth;
+        UpdateHealthBar();
+        
+
     }
 
     public void SetPath(Stack<Node> newPath)
     {
-        if(newPath != null)
+        if(newPath != null && newPath.Count > 0)
         {
             path = newPath;
             GridPos = path.Peek().GridPos;
@@ -98,6 +134,7 @@ public class Unit : MonoBehaviour {
 
     private void Move()
     {
+        //Debug.Log("Unit: " + this.name + " from team: " + this.Team + " moving to: " + destination);
         transform.position = Vector2.MoveTowards(transform.position, destination, speed * Time.deltaTime);
 
         if(transform.position == destination)
@@ -112,12 +149,8 @@ public class Unit : MonoBehaviour {
 
     private void OnTriggerEnter2D(Collider2D collision)
     {
-        //remove when units can die/fight       
-        if(collision.tag == "CastleEntrance")
-        {
-            Debug.Log("Found enemy castle");
-            OnDeath();
-        }
+        //This function is currently not used, using aggrorangetrigger and attackrangetrigger instead
+        
     }
 
     private void OnDeath()
@@ -130,46 +163,60 @@ public class Unit : MonoBehaviour {
     public void AggroRangeTrigger(Collider2D other)
     {
         //Found another unit
-        if(other.tag == "Unit" && other.GetComponent<Unit>().Team != Team)
+        if(other.tag == "Unit" && other.GetComponent<Unit>().team != team && !aggroList.Contains(other.GetComponent<Unit>()))
         {
-            Debug.Log("Enemy unit in AGGRO range");
-            SetState(States.MovingToUnit);
-            target = other.GetComponent<Unit>();
-            MoveToUnit(target);
-        }
-        //Found the enemy castle
-        else if(other.tag == "Castle")
-        {          
-            //Debug.Log("Enemy castle in AGGRO range");
-            SetState(States.MovingToCastle);
-            //TODO: create a castle unit
-            //target = other.GetComponent<Unit>();
+            //Debug.Log("AggroTrigger on unit: " + other.GetComponent<Unit>().name + " with id: " + other.GetComponent<Unit>().Id);
+            aggroList.Add(other.GetComponent<Unit>());
         }
     }
 
     //Called from child object AttackRange
     public void AttackRangeTrigger(Collider2D other)
     {
-        //Found another unit
-        if (other.tag == "Unit" && other.GetComponent<Unit>().Team != Team)
+        if(other.tag == "Unit")
         {
-            
-            Debug.Log("Enemy unit" + other.name + " in ATTACK range");
-            SetState(States.AttackingUnit);
-            StopMoving();
-            SetPath(null); //temp
+           // Debug.Log("AT: " + other.name);
         }
-        //Found the enemy castle
-        else if (other.tag == "Castle")
+        //if (other.tag == "Unit" && other.GetComponent<Unit>() == target)
+        //{
+        //    Debug.Log("AttackTrigger on unit: " + target.name + " with id: " + target.Id);
+        //    targetInRange = true;
+        //}
+        if (other.tag == "Unit" && other.GetComponent<Unit>().team != team && !attacklist.Contains(other.GetComponent<Unit>()))
         {
-            //Debug.Log("Enemy castle in ATTACK range");
-            SetState(States.AttackingCastle);
+            attacklist.Add(other.GetComponent<Unit>());
         }
     }
 
-    private void SetState(States newState)
+    public void AggroRangeTriggerExit(Collider2D other)
     {
-        this.currentState = newState;
+        Unit u = other.GetComponent<Unit>();
+        if(aggroList.Contains(u))
+        {
+            aggroList.Remove(u);
+        }
+    }
+    public void AttackRangeTriggerExit(Collider2D other)
+    {
+
+
+        if(other.tag == "Unit")
+        {
+            Unit u = other.GetComponent<Unit>();
+            if (aggroList.Contains(u))
+            {
+                aggroList.Remove(u);
+            }
+
+            //Debug.Log("Name: " + other.name);
+            //Unit u = other.GetComponent<Unit>();
+            //if (u.tag == "Unit" && target && u.Id == target.Id)
+            //{
+            //    Debug.Log("range FALSE");
+            //    targetInRange = false;
+            //}
+        }
+
     }
 
     private void Attack()
@@ -183,33 +230,38 @@ public class Unit : MonoBehaviour {
                 attackTimer = 0;
             }
         }
-        if(target != null && currentState == States.AttackingUnit && target.gameObject.activeSelf)
+        //If we have a valid target
+        if(target != null)
         {
-            if(canAttack)
+            //If we are in range
+            if (targetInRange)
             {
-                Hit();
-                canAttack = false;
+                //If the attackTimer is rdy
+                if (canAttack)
+                {
+                    Hit();
+                    canAttack = false;
+                }
             }
+
         }
     }
-
     private void Hit()
     {
         
         target.TakeDamage(attackDamage);
-        if(target.health <= 0)
+        if(target.Health <= 0)
         {
             target = null;
         }
-       // Debug.Log("HIT! Current hp: " + health);
 
     }
 
     public void TakeDamage(float damage)
     {
-        health -= damage;
+        Health -= damage;
         UpdateHealthBar();
-        if(health<= 0)
+        if(Health<= 0)
         {
             OnDeath();
         }
@@ -217,8 +269,7 @@ public class Unit : MonoBehaviour {
 
     public void UpdateHealthBar()
     {
-        healthBar.fillAmount = health / maxHealth;
-
+        healthBar.fillAmount = Health / maxHealth;
     }
 
     private void MoveToUnit(Unit target)
@@ -230,6 +281,96 @@ public class Unit : MonoBehaviour {
     {
         path = null;
     }
+
+    private void UpdateTarget()
+    {
+        //Debug.Log("Id: " + this.Id + " listCount: " + enemyList.Count);
+        //if the target is out of range or is dead, remove it as the current target
+        //if (!enemyList.Contains(target))
+        //{
+        //    target = null;
+        //}
+
+        UpdateAggroList();
+        UpdateAttackList();
+        
+
+        //If target is in range, stop. Otherwise move to it
+        if (targetInRange && target)
+        {
+            //MAYBE DO TARGET STUFF HERE
+            if(moving)
+            {
+
+                StopMoving(); //temp I think
+                SetPath(null); //temp
+                moving = false;
+            }
+            
+        }
+        else if(target && !moving)
+        {
+            //Debug.Log("Moving to: " + target.name + " id: " + target.Id);
+            MoveToUnit(target);
+            moving = true;
+        }
+           
+
+    }
+
+    private void UpdateAggroList()
+    {
+        //If the target no longer exists, pick the next enemy in the list
+        if (target == null || !target.gameObject.activeSelf)
+        {
+
+            if (aggroList.Count > 0)
+            {
+                //Debug.Log("PICKING NEW TARGET");
+                target = aggroList[0];
+                aggroList.RemoveAt(0);
+            }
+        }
+
+        //If enemies are in range but the unit is attacking the castle, change target
+        if (target && target.name == "Castle" && aggroList.Count > 0)
+        {
+            aggroList.Add(target);
+            target = aggroList[0];
+            aggroList.RemoveAt(0);
+           // Debug.Log("New target: " + target.name);
+        }
+    }
+
+    private void UpdateAttackList()
+    {
+        //target exists and is in range
+        if(target && attacklist.Contains(target))
+        {
+            targetInRange = true;
+        }
+        else
+        {
+            targetInRange = false;
+        }
+    }
+
+    private void setHealthBarColor()
+    {
+        Image[] bars = this.gameObject.GetComponentsInChildren<Image>();
+        //bars[0] = HealthBG, bars[0] = HealthBar
+        Image healthBar = bars[1];
+
+        if (this.team == Teams.LeftTeam)
+        {
+            healthBar.color = leftColor;
+        }
+        else
+        {
+            healthBar.color = rightColor;
+        }
+    }
+
 
 
 

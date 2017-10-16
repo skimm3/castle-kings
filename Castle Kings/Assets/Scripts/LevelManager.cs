@@ -22,8 +22,8 @@ public class LevelManager : Singleton<LevelManager> {
 
 
 
-    private Point playerCastleSpawn = new Point(7, 9);
-    private Point enemyCastleSpawn = new Point(45,9);
+    private Point leftCastleSpawn = new Point(7, 9);
+    private Point rightCastleSpawn = new Point(45,9);
     private int castleWidth = 5; //Needs to be odd
     private int castleHeight = 4;
 
@@ -44,19 +44,19 @@ public class LevelManager : Singleton<LevelManager> {
         get { return tilePrefabs[0].GetComponent<SpriteRenderer>().sprite.bounds.size.x; }
     }
 
-    public Point EnemyCastleSpawn
+    public Point RightCastleSpawn
     {
         get
         {
-            return enemyCastleSpawn;
+            return rightCastleSpawn;
         }
     }
 
-    public Point PlayerCastleSpawn
+    public Point LeftCastleSpawn
     {
         get
         {
-            return playerCastleSpawn;
+            return leftCastleSpawn;
         }
     }
 
@@ -129,17 +129,17 @@ public class LevelManager : Singleton<LevelManager> {
     {
 
         //Create the entrance
-        Instantiate(castleEntrancePrefab, Tiles[playerCastleSpawn].GetComponent<TileHandler>().WorldPos, Quaternion.identity);
-        Tiles[playerCastleSpawn].GetComponent<TileHandler>().IsEmpty = false;
-        Tiles[playerCastleSpawn].GetComponent<TileHandler>().Walkable = true;
+        Instantiate(castleEntrancePrefab, Tiles[leftCastleSpawn].GetComponent<TileHandler>().WorldPos, Quaternion.identity);
+        Tiles[leftCastleSpawn].GetComponent<TileHandler>().IsEmpty = false;
+        Tiles[leftCastleSpawn].GetComponent<TileHandler>().Walkable = true;
 
 
         //Create the rest of the castle
-        for (int x = playerCastleSpawn.X - ((castleWidth-1)/2); x <= playerCastleSpawn.X + ((castleWidth - 1) / 2); x++)
+        for (int x = leftCastleSpawn.X - ((castleWidth-1)/2); x <= leftCastleSpawn.X + ((castleWidth - 1) / 2); x++)
         {
-            for (int y = playerCastleSpawn.Y; y > playerCastleSpawn.Y - castleHeight; y--)
+            for (int y = leftCastleSpawn.Y; y > leftCastleSpawn.Y - castleHeight; y--)
             {
-                if (x != playerCastleSpawn.X || y != playerCastleSpawn.Y)
+                if (x != leftCastleSpawn.X || y != leftCastleSpawn.Y)
                 {
                     Instantiate(castleWallPrefab, Tiles[new Point(x, y)].GetComponent<TileHandler>().WorldPos, Quaternion.identity);
                     Tiles[new Point(x, y)].GetComponent<TileHandler>().IsEmpty = false;
@@ -150,25 +150,32 @@ public class LevelManager : Singleton<LevelManager> {
             }
         }
 
-        //TODO: CREATE ENEMY CASTLE
-        Instantiate(castleEntrancePrefab, Tiles[enemyCastleSpawn].GetComponent<TileHandler>().WorldPos, Quaternion.identity);
-        Tiles[enemyCastleSpawn].GetComponent<TileHandler>().IsEmpty = false;
-        Tiles[enemyCastleSpawn].GetComponent<TileHandler>().Walkable = true;
+        //CREATE ENEMY CASTLE
+        Instantiate(castleEntrancePrefab, Tiles[rightCastleSpawn].GetComponent<TileHandler>().WorldPos, Quaternion.identity);
+        Tiles[rightCastleSpawn].GetComponent<TileHandler>().IsEmpty = false;
+        Tiles[rightCastleSpawn].GetComponent<TileHandler>().Walkable = true;
 
-        for (int x = enemyCastleSpawn.X - ((castleWidth - 1) / 2); x <= enemyCastleSpawn.X + ((castleWidth - 1) / 2); x++)
+        for (int x = rightCastleSpawn.X - ((castleWidth - 1) / 2); x <= rightCastleSpawn.X + ((castleWidth - 1) / 2); x++)
         {
-            for (int y = enemyCastleSpawn.Y; y > enemyCastleSpawn.Y - castleHeight; y--)
+            for (int y = rightCastleSpawn.Y; y > rightCastleSpawn.Y - castleHeight; y--)
             {
-                if (x != enemyCastleSpawn.X || y != enemyCastleSpawn.Y)
+                if (x != rightCastleSpawn.X || y != rightCastleSpawn.Y)
                 {
                     Instantiate(castleWallPrefab, Tiles[new Point(x, y)].GetComponent<TileHandler>().WorldPos, Quaternion.identity);
                     Tiles[new Point(x, y)].GetComponent<TileHandler>().IsEmpty = false;
                     Tiles[new Point(x, y)].GetComponent<TileHandler>().Walkable = false;
-
-
                 }
             }
         }
+
+        //Create the castle units
+
+        Unit leftCastle = GameManager.Instance.Pool.GetObject("Castle").GetComponent<Unit>();
+        Unit rightCastle = GameManager.Instance.Pool.GetObject("Castle").GetComponent<Unit>();
+        leftCastle.Spawn(leftCastleSpawn, null, Teams.LeftTeam);
+        rightCastle.Spawn(rightCastleSpawn, null, Teams.RightTeam);
+        GameManager.Instance.LeftCastle = leftCastle;
+        GameManager.Instance.RightCastle = rightCastle;
 
     }
 
